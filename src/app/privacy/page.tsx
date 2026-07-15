@@ -1,0 +1,7 @@
+import type { Metadata } from "next";
+
+export const metadata: Metadata = { title: "Privacy" };
+
+export default function PrivacyPage() {
+  return <main className="legal-page"><p className="eyebrow"><span>LEGAL / 01</span> Plain-language privacy</p><h1>Temporary<br />means temporary.</h1><div className="legal-grid"><aside>Effective July 2026<br />Version 1.0</aside><article><h2>What we store</h2><p>9ms stores the files and metadata required to deliver your transfer: file names, sizes, transfer settings, and security tokens in hashed form. One-time secrets are encrypted with AES-256-GCM before storage. We process network identifiers for short-lived rate limiting and abuse prevention.</p><h2>How long</h2><p>Completed file transfers are available for seven days. Incomplete uploads and unopened secret links expire after 24 hours. A one-time secret is erased immediately after its first explicit reveal. Security and moderation records may be retained longer where necessary to prevent abuse.</p><h2>Who receives files</h2><p>Anyone who has the unguessable share link—and the password when one is set—can access a transfer. Do not share links through channels you do not trust.</p><h2>Your controls</h2><p>The sender receives a separate management credential that can delete a transfer or revoke a secret link early. Report suspected file-transfer abuse from the download page.</p></article></div></main>;
+}
