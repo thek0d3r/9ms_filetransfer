@@ -82,7 +82,9 @@ services:
       retries: 20
 
   clamav:
-    image: clamav/clamav:stable
+    # The Alpine `stable` image is amd64-only. The official Debian image is
+    # multi-architecture and runs natively on Oracle Ampere (linux/arm64/v8).
+    image: clamav/clamav:1.5-debian
     restart: unless-stopped
     volumes:
       - ${CLAMAV_DATA_DIR:-./data/clamav}:/var/lib/clamav
