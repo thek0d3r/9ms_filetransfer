@@ -1,7 +1,7 @@
 import net from "node:net";
 import { once } from "node:events";
 import { Readable } from "node:stream";
-import { and, eq, inArray, isNotNull, lt, or } from "drizzle-orm";
+import { and, eq, inArray, isNotNull, isNull, lt, lte, or } from "drizzle-orm";
 import { Job, Worker } from "bullmq";
 import { db } from "@/lib/db";
 import { oneTimeSecrets, transferFiles, transfers } from "@/lib/db/schema";
@@ -14,6 +14,7 @@ import { abortMultipart, deleteObjects, getObject } from "@/lib/s3";
 import { filesForTransfer } from "@/lib/transfers";
 
 type TransferJob = { transferId: string };
+type DeleteFileJob = { fileId: string };
 
 async function scanStream(stream: Readable) {
   if (env.CLAMAV_DISABLED) return { clean: true, response: "disabled" };
@@ -78,6 +79,24 @@ async function removeTransferObjects(transferId: string) {
   await deleteObjects(files.map((file) => file.objectKey));
 }
 
+async function deleteConsumedFile(fileId: string) {
+  const now = new Date();
+  const [file] = await db.select().from(transferFiles).where(and(
+    eq(transferFiles.id, fileId),
+    eq(transferFiles.status, "consumed"),
+    isNull(transferFiles.deletedAt),
+    lte(transferFiles.deleteAfter, now),
+  )).limit(1);
+  if (!file) return;
+  await deleteObjects([file.objectKey]);
+  await db.update(transferFiles).set({ deletedAt: now }).where(and(
+    eq(transferFiles.id, file.id),
+    eq(transferFiles.status, "consumed"),
+    isNull(transferFiles.deletedAt),
+  ));
+  console.info(JSON.stringify({ event: "download.object_deleted", transferId: file.transferId, fileId: file.id }));
+}
+
 async function cleanup() {
   const now = new Date();
   const staleUpload = new Date(now.getTime() - env.UPLOAD_TTL_HOURS * 60 * 60 * 1000);
@@ -89,16 +108,23 @@ async function cleanup() {
     await removeTransferObjects(transfer.id);
     await db.update(transfers).set({ status: transfer.status === "ready" ? "expired" : "deleted", deletedAt: now }).where(eq(transfers.id, transfer.id));
   }
+  const consumedFiles = await db.select({ id: transferFiles.id }).from(transferFiles).where(and(
+    eq(transferFiles.status, "consumed"),
+    isNull(transferFiles.deletedAt),
+    lte(transferFiles.deleteAfter, now),
+  ));
+  for (const file of consumedFiles) await deleteConsumedFile(file.id);
   const expiredSecrets = await db.update(oneTimeSecrets).set({ ciphertext: null, nonce: null, authTag: null })
     .where(and(lt(oneTimeSecrets.expiresAt, now), isNotNull(oneTimeSecrets.ciphertext)))
     .returning({ id: oneTimeSecrets.id });
-  console.info(JSON.stringify({ event: "cleanup.complete", transfers: candidates.length, secrets: expiredSecrets.length }));
+  console.info(JSON.stringify({ event: "cleanup.complete", transfers: candidates.length, consumedFiles: consumedFiles.length, secrets: expiredSecrets.length }));
 }
 
 const worker = new Worker(
   "9ms-transfers",
   async (job: Job) => {
     if (job.name === "scan") return scanTransfer((job.data as TransferJob).transferId);
+    if (job.name === "delete-file") return deleteConsumedFile((job.data as DeleteFileJob).fileId);
     if (job.name === "cleanup") return cleanup();
     throw new Error(`Unknown job: ${job.name}`);
   },

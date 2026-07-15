@@ -15,6 +15,13 @@
       "when": 1784101076077,
       "tag": "0001_futuristic_terrax",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1784113068232,
+      "tag": "0002_brave_doomsday",
+      "breakpoints": true
     }
   ]
 }

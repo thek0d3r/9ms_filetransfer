@@ -1,11 +1,14 @@
 import { PassThrough, Readable } from "node:stream";
 import archiver from "archiver";
+import { downloadDeleteAfter } from "@/lib/download-lifecycle";
+import { env } from "@/lib/env";
 import { apiError, errorMessage } from "@/lib/http";
 import { contentDisposition, safeFilename, uniqueArchiveNames } from "@/lib/names";
 import { downloadsStarted } from "@/lib/metrics";
+import { enqueueFileDeletion } from "@/lib/queue";
 import { getObject } from "@/lib/s3";
 import { canAccess } from "@/lib/share-auth";
-import { filesForTransfer, isAvailable, transferByShareToken } from "@/lib/transfers";
+import { claimTransferDownload, expediteFileDeletion, isAvailable, transferByShareToken } from "@/lib/transfers";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -15,7 +18,9 @@ export async function GET(_request: Request, context: { params: Promise<{ token:
   const transfer = await transferByShareToken(token);
   if (!transfer || !isAvailable(transfer.status, transfer.expiresAt)) return apiError("Transfer not found", 404);
   if (!(await canAccess(transfer))) return apiError("Password required", 401);
-  const files = (await filesForTransfer(transfer.id)).filter((file) => file.status === "clean");
+  const claimedAt = new Date();
+  const fallbackDeleteAfter = downloadDeleteAfter(claimedAt, env.DOWNLOAD_URL_TTL_SECONDS);
+  const files = await claimTransferDownload(transfer.id, claimedAt, fallbackDeleteAfter);
   if (!files.length) return apiError("No downloadable files", 404);
 
   const output = new PassThrough();
@@ -31,6 +36,13 @@ export async function GET(_request: Request, context: { params: Promise<{ token:
         archive.append(object.Body as Readable, { name: names[index] });
       }
       await archive.finalize();
+      const deleteAfter = await expediteFileDeletion(files.map((file) => file.id));
+      const scheduled = await Promise.allSettled(files.map((file) => enqueueFileDeletion(file.id, deleteAfter)));
+      for (const [index, result] of scheduled.entries()) {
+        if (result.status === "rejected") {
+          console.error(JSON.stringify({ event: "download.delete_schedule_failed", transferId: transfer.id, fileId: files[index].id, error: errorMessage(result.reason) }));
+        }
+      }
     } catch (error) {
       console.error(JSON.stringify({ event: "download.zip.failed", transferId: transfer.id, error: errorMessage(error) }));
       archive.abort();

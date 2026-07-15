@@ -17,6 +17,7 @@ export default async function TransferPage({ params }: { params: Promise<{ token
   const transfer = await transferByShareToken(token);
   if (!transfer || !isAvailable(transfer.status, transfer.expiresAt)) notFound();
   const accessible = await canAccess(transfer);
-  const files = accessible ? (await filesForTransfer(transfer.id)).filter((file) => file.status === "clean").map((file) => ({ id: file.id, name: file.originalName, size: file.size })) : [];
-  return <Recipient token={token} title={transfer.title} message={transfer.message} totalSize={transfer.totalSize} fileCount={transfer.fileCount} expiresAt={transfer.expiresAt!.toISOString()} locked={!accessible} initialFiles={files} />;
+  const availableFiles = (await filesForTransfer(transfer.id)).filter((file) => file.status === "clean");
+  const files = accessible ? availableFiles.map((file) => ({ id: file.id, name: file.originalName, size: file.size })) : [];
+  return <Recipient token={token} title={transfer.title} message={transfer.message} totalSize={availableFiles.reduce((sum, file) => sum + file.size, 0)} fileCount={availableFiles.length} expiresAt={transfer.expiresAt!.toISOString()} locked={!accessible} initialFiles={files} />;
 }

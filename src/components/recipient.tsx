@@ -75,7 +75,7 @@ export function Recipient({ token, title, message, totalSize, fileCount, expires
             </ul>
           </>
         )}
-        <div className="panel-foot"><span>Files delete automatically after expiry.</span><button type="button" onClick={() => setReporting(true)}>Report transfer</button></div>
+        <div className="panel-foot"><span>One download only. Files delete after download or expiry.</span><button type="button" onClick={() => setReporting(true)}>Report transfer</button></div>
       </section>
 
       {reporting && (

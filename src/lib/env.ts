@@ -26,6 +26,7 @@ const schema = z.object({
   MAX_FILES: z.coerce.number().int().min(1).max(1000).default(100),
   TRANSFER_TTL_HOURS: z.coerce.number().int().positive().default(168),
   UPLOAD_TTL_HOURS: z.coerce.number().int().positive().default(24),
+  DOWNLOAD_URL_TTL_SECONDS: z.coerce.number().int().min(60).max(3600).default(900),
   CREATE_LIMIT_PER_HOUR: z.coerce.number().int().positive().default(12),
   PASSWORD_ATTEMPT_LIMIT: z.coerce.number().int().positive().default(10),
 });

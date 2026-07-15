@@ -9,7 +9,7 @@ export const transferStatus = pgEnum("transfer_status", [
   "deleted",
 ]);
 
-export const fileStatus = pgEnum("file_status", ["pending", "uploading", "uploaded", "clean", "infected"]);
+export const fileStatus = pgEnum("file_status", ["pending", "uploading", "uploaded", "clean", "infected", "consumed"]);
 
 export const transfers = pgTable(
   "transfers",
@@ -45,9 +45,15 @@ export const transferFiles = pgTable(
     status: fileStatus("status").notNull().default("pending"),
     uploadId: text("upload_id"),
     scannedAt: timestamp("scanned_at", { withTimezone: true }),
+    downloadClaimedAt: timestamp("download_claimed_at", { withTimezone: true }),
+    deleteAfter: timestamp("delete_after", { withTimezone: true }),
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
-  (table) => [index("transfer_files_transfer_idx").on(table.transferId)],
+  (table) => [
+    index("transfer_files_transfer_idx").on(table.transferId),
+    index("transfer_files_deletion_idx").on(table.status, table.deleteAfter),
+  ],
 );
 
 export const abuseReports = pgTable(

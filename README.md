@@ -1,6 +1,6 @@
 # 9ms
 
-9ms is a temporary, anonymous file-transfer and secret-sharing service. It supports multipart uploads up to 2 GB, password-protected links, seven-day expiry, malware scanning, individual downloads, streamed ZIP downloads, sender deletion, abuse reporting, and encrypted one-time password links.
+9ms is a temporary, anonymous file-transfer and secret-sharing service. It supports multipart uploads up to 2 GB, password-protected links, seven-day expiry, malware scanning, one-time individual and ZIP downloads, sender deletion, abuse reporting, and encrypted one-time password links.
 
 ## Architecture
 
@@ -13,7 +13,7 @@ The production deployment is designed for one Oracle Cloud VM plus a private S3 
 - ClamAV fail-closed scanning worker
 - Nginx reverse proxy
 
-Browser uploads go directly to S3 using short-lived signed multipart URLs. The Next.js container never buffers upload bodies. ZIP downloads are streamed with bounded application memory.
+Browser uploads go directly to S3 using short-lived signed multipart URLs. The Next.js container never buffers upload bodies. Individual downloads are claimed once, redirected to a short-lived signed S3 URL, and deleted after that URL expires. ZIP downloads are streamed with bounded application memory and their source objects are queued for deletion when archiving completes.
 
 ## Local start
 

@@ -85,7 +85,7 @@ export async function signedDownload(objectKey: string, filename: string) {
   return getSignedUrl(
     signingS3,
     new GetObjectCommand({ Bucket: env.S3_BUCKET, Key: objectKey, ResponseContentDisposition: `attachment; filename*=UTF-8''${encodeURIComponent(filename)}` }),
-    { expiresIn: 5 * 60 },
+    { expiresIn: env.DOWNLOAD_URL_TTL_SECONDS },
   );
 }
 
