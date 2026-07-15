@@ -13,6 +13,7 @@ export const createTransferSchema = z.object({
     .min(8, "Password must be at least 8 characters.")
     .max(128, "Password must be at most 128 characters.")
     .optional(),
+  retentionDays: z.union([z.literal(7), z.literal(14), z.literal(30)]).default(7),
   files: z.array(fileDeclarationSchema).min(1),
 });
 
@@ -36,4 +37,14 @@ export const reportSchema = z.object({
 export const createSecretSchema = z.object({
   secret: z.string().min(1).max(4096),
   label: z.string().trim().max(120).optional(),
+});
+
+export const registerSchema = z.object({
+  email: z.string().trim().toLowerCase().email().max(254),
+  password: z.string().min(10, "Password must be at least 10 characters.").max(128),
+});
+
+export const loginSchema = z.object({
+  email: z.string().trim().toLowerCase().email().max(254),
+  password: z.string().min(1).max(128),
 });

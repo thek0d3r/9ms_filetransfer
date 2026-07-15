@@ -1,4 +1,38 @@
-import { bigint, index, integer, pgEnum, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import { bigint, index, integer, pgEnum, pgTable, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core";
+
+export const userRole = pgEnum("user_role", ["user", "admin"]);
+export const userPlan = pgEnum("user_plan", ["free", "premium"]);
+
+export const users = pgTable(
+  "users",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    email: text("email").notNull(),
+    passwordHash: text("password_hash").notNull(),
+    role: userRole("role").notNull().default("user"),
+    plan: userPlan("plan").notNull().default("free"),
+    stripeCustomerId: text("stripe_customer_id").unique(),
+    stripeSubscriptionId: text("stripe_subscription_id").unique(),
+    subscriptionStatus: text("subscription_status"),
+    subscriptionPeriodEnd: timestamp("subscription_period_end", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    lastLoginAt: timestamp("last_login_at", { withTimezone: true }),
+  },
+  (table) => [uniqueIndex("users_email_lower_idx").on(table.email)],
+);
+
+export const userSessions = pgTable(
+  "user_sessions",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    tokenHash: text("token_hash").notNull().unique(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    lastSeenAt: timestamp("last_seen_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index("user_sessions_user_expiry_idx").on(table.userId, table.expiresAt)],
+);
 
 export const transferStatus = pgEnum("transfer_status", [
   "uploading",
@@ -15,6 +49,7 @@ export const transfers = pgTable(
   "transfers",
   {
     id: uuid("id").primaryKey().defaultRandom(),
+    ownerId: uuid("owner_id").references(() => users.id, { onDelete: "set null" }),
     shareTokenHash: text("share_token_hash").notNull().unique(),
     manageTokenHash: text("manage_token_hash").notNull().unique(),
     title: text("title"),
@@ -24,12 +59,18 @@ export const transfers = pgTable(
     totalSize: bigint("total_size", { mode: "number" }).notNull(),
     fileCount: integer("file_count").notNull(),
     reportCount: integer("report_count").notNull().default(0),
+    retentionHours: integer("retention_hours").notNull().default(168),
+    scanPriority: integer("scan_priority").notNull().default(10),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     readyAt: timestamp("ready_at", { withTimezone: true }),
+    firstDownloadedAt: timestamp("first_downloaded_at", { withTimezone: true }),
     expiresAt: timestamp("expires_at", { withTimezone: true }),
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
   },
-  (table) => [index("transfers_status_expires_idx").on(table.status, table.expiresAt)],
+  (table) => [
+    index("transfers_status_expires_idx").on(table.status, table.expiresAt),
+    index("transfers_owner_created_idx").on(table.ownerId, table.createdAt),
+  ],
 );
 
 export const transferFiles = pgTable(
@@ -78,6 +119,28 @@ export const auditLogs = pgTable("audit_logs", {
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
+export const activityEvents = pgTable(
+  "activity_events",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id").references(() => users.id, { onDelete: "set null" }),
+    action: text("action").notNull(),
+    ipHash: text("ip_hash"),
+    metadata: text("metadata"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("activity_events_created_idx").on(table.createdAt),
+    index("activity_events_user_created_idx").on(table.userId, table.createdAt),
+  ],
+);
+
+export const stripeEvents = pgTable("stripe_events", {
+  id: text("id").primaryKey(),
+  type: text("type").notNull(),
+  processedAt: timestamp("processed_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
 export const oneTimeSecrets = pgTable(
   "one_time_secrets",
   {
@@ -98,3 +161,4 @@ export const oneTimeSecrets = pgTable(
 
 export type Transfer = typeof transfers.$inferSelect;
 export type TransferFile = typeof transferFiles.$inferSelect;
+export type User = typeof users.$inferSelect;

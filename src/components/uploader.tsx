@@ -13,7 +13,7 @@ type Session = {
   fingerprints: string[];
 };
 
-const MAX_BYTES = 2 * 1024 * 1024 * 1024;
+const DEFAULT_MAX_BYTES = 2 * 1024 * 1024 * 1024;
 const MIN_PASSWORD_LENGTH = 8;
 
 type ApiErrorBody = {
@@ -66,7 +66,7 @@ function uploadPart(url: string, blob: Blob, onProgress: (loaded: number) => voi
   });
 }
 
-export function Uploader() {
+export function Uploader({ maxBytes = DEFAULT_MAX_BYTES, maxFiles = 100, plan = "free" }: { maxBytes?: number; maxFiles?: number; plan?: "free" | "premium" }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const resumeRef = useRef<HTMLInputElement>(null);
   const activeXhrs = useRef<Set<XMLHttpRequest>>(new Set());
@@ -74,6 +74,7 @@ export function Uploader() {
   const [title, setTitle] = useState("");
   const [message, setMessage] = useState("");
   const [password, setPassword] = useState("");
+  const [retentionDays, setRetentionDays] = useState<7 | 14 | 30>(7);
   const [stage, setStage] = useState<"compose" | "uploading" | "scanning" | "complete" | "error">("compose");
   const [progress, setProgress] = useState(0);
   const [notice, setNotice] = useState("");
@@ -107,9 +108,9 @@ export function Uploader() {
       const unique = new Map(current.map((file) => [fingerprint(file), file]));
       for (const file of incoming) unique.set(fingerprint(file), file);
       const next = [...unique.values()];
-      if (next.length > 100) setNotice("A transfer can hold up to 100 files.");
-      if (next.reduce((sum, file) => sum + file.size, 0) > MAX_BYTES) setNotice("That selection exceeds the 2 GB transfer limit.");
-      return next.slice(0, 100);
+      if (next.length > maxFiles) setNotice(`Your plan can hold up to ${maxFiles} files in one transfer.`);
+      if (next.reduce((sum, file) => sum + file.size, 0) > maxBytes) setNotice(`That selection exceeds the ${bytes(maxBytes)} transfer limit.`);
+      return next.slice(0, maxFiles);
     });
   }
 
@@ -201,8 +202,8 @@ export function Uploader() {
   }
 
   async function start() {
-    if (!files.length || totalSize > MAX_BYTES || files.some((file) => file.size === 0)) {
-      setNotice(files.some((file) => file.size === 0) ? "Empty files cannot be transferred." : "Choose files within the 2 GB limit.");
+    if (!files.length || totalSize > maxBytes || files.some((file) => file.size === 0)) {
+      setNotice(files.some((file) => file.size === 0) ? "Empty files cannot be transferred." : `Choose files within the ${bytes(maxBytes)} limit.`);
       return;
     }
     if (password.length > 0 && password.length < MIN_PASSWORD_LENGTH) {
@@ -212,7 +213,7 @@ export function Uploader() {
     try {
       const created = await jsonRequest<Omit<Session, "status" | "fingerprints">>("/api/transfers", {
         method: "POST",
-        body: JSON.stringify({ title: title || undefined, message: message || undefined, password: password || undefined, files: files.map((file) => ({ name: file.name, size: file.size, type: file.type })) }),
+        body: JSON.stringify({ title: title || undefined, message: message || undefined, password: password || undefined, retentionDays, files: files.map((file) => ({ name: file.name, size: file.size, type: file.type })) }),
       });
       const active: Session = { ...created, status: "uploading", fingerprints: files.map(fingerprint) };
       localStorage.setItem("9ms:active-transfer", JSON.stringify(active));
@@ -323,7 +324,7 @@ export function Uploader() {
 
       {files.length > 0 && (
         <div className="file-stack">
-          <div className="file-summary"><strong>{files.length} file{files.length === 1 ? "" : "s"}</strong><span>{bytes(totalSize)} / 2 GB</span></div>
+          <div className="file-summary"><strong>{files.length} file{files.length === 1 ? "" : "s"}</strong><span>{bytes(totalSize)} / {bytes(maxBytes)}</span></div>
           <ul>{files.map((file) => <li key={fingerprint(file)}><span>{file.name}</span><small>{bytes(file.size)}</small><button type="button" aria-label={`Remove ${file.name}`} onClick={() => setFiles((current) => current.filter((item) => fingerprint(item) !== fingerprint(file)))}>×</button></li>)}</ul>
         </div>
       )}
@@ -332,9 +333,11 @@ export function Uploader() {
         <label><span>Title <i>optional</i></span><input value={title} maxLength={120} onChange={(event) => setTitle(event.target.value)} placeholder="Quarterly cut" /></label>
         <label><span>Message <i>optional</i></span><textarea value={message} maxLength={2000} onChange={(event) => setMessage(event.target.value)} placeholder="A little context goes a long way." /></label>
         <label><span>Password <i>optional · 8+ chars</i></span><input type="password" value={password} minLength={8} maxLength={128} onChange={(event) => setPassword(event.target.value)} placeholder="Keep it between us" /></label>
+        {plan === "premium" && <label><span>Link expiry <i>Premium</i></span><select value={retentionDays} onChange={(event) => setRetentionDays(Number(event.target.value) as 7 | 14 | 30)}><option value={7}>7 days</option><option value={14}>14 days</option><option value={30}>30 days</option></select></label>}
       </div>
       {notice && <p className="form-notice">{notice}</p>}
-      <button className="transfer-button" type="button" disabled={!files.length || totalSize > MAX_BYTES} onClick={start}><span>MAKE THE LINK</span><i>↗</i></button>
+      <button className="transfer-button" type="button" disabled={!files.length || totalSize > maxBytes} onClick={start}><span>MAKE THE LINK</span><i>↗</i></button>
+      {plan === "premium" && <p className="plan-note"><span>PREMIUM</span> 20 GB · 250 files · up to 30 days</p>}
       <p className="fine-print">By transferring, you agree to our Terms. Files expire 7 days after the safety check.</p>
     </section>
   );

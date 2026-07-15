@@ -8,8 +8,8 @@ function queue() {
   return transferQueue;
 }
 
-export async function enqueueScan(transferId: string) {
-  await queue().add("scan", { transferId }, { jobId: `scan-${transferId}`, attempts: 3, backoff: { type: "exponential", delay: 5_000 } });
+export async function enqueueScan(transferId: string, priority = 10) {
+  await queue().add("scan", { transferId }, { jobId: `scan-${transferId}`, priority, attempts: 3, backoff: { type: "exponential", delay: 5_000 } });
 }
 
 export async function enqueueCleanup() {

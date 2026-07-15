@@ -1,6 +1,10 @@
+import { currentUser } from "@/lib/auth";
 import { Uploader } from "@/components/uploader";
+import { formatBytes, planLimits } from "@/lib/plans";
 
-export default function HomePage() {
+export default async function HomePage() {
+  const account = await currentUser();
+  const limits = planLimits(account?.user);
   return (
     <main className="home-shell">
       <section className="hero-copy" aria-labelledby="hero-title">
@@ -13,9 +17,9 @@ export default function HomePage() {
           <small>is a feeling,<br />not a benchmark.</small>
         </div>
       </section>
-      <Uploader />
+      <Uploader maxBytes={limits.maxTransferBytes} maxFiles={limits.maxFiles} plan={limits.plan} />
       <footer className="home-footer">
-        <span>UP TO 2 GB</span><span>7 DAY EXPIRY</span><span>OPTIONAL PASSWORD</span>
+        <span>UP TO {formatBytes(limits.maxTransferBytes)}</span><span>{limits.plan === "premium" ? "UP TO 30 DAYS" : "7 DAY EXPIRY"}</span><span>OPTIONAL PASSWORD</span>
       </footer>
     </main>
   );

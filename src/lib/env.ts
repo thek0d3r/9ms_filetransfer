@@ -23,10 +23,6 @@ const schema = z.object({
   CLAMAV_PORT: z.coerce.number().int().positive().default(3310),
   CLAMAV_DISABLED: bool.default(false),
   CSAM_SHA256_DENYLIST: z.string().default(""),
-  CSAM_HIVE_API_KEY: z.string().min(1).optional(),
-  CSAM_HIVE_API_URL: z.url().default("https://api.thehive.ai/api/v2/task/sync"),
-  CSAM_PROVIDER_REQUIRED: bool.default(false),
-  CSAM_PROVIDER_TIMEOUT_MS: z.coerce.number().int().min(1_000).max(300_000).default(120_000),
   MAX_TRANSFER_BYTES: z.coerce.number().int().positive().default(2_147_483_648),
   MAX_FILES: z.coerce.number().int().min(1).max(1000).default(100),
   TRANSFER_TTL_HOURS: z.coerce.number().int().positive().default(168),
@@ -34,6 +30,15 @@ const schema = z.object({
   DOWNLOAD_URL_TTL_SECONDS: z.coerce.number().int().min(60).max(3600).default(900),
   CREATE_LIMIT_PER_HOUR: z.coerce.number().int().positive().default(12),
   PASSWORD_ATTEMPT_LIMIT: z.coerce.number().int().positive().default(10),
+  SESSION_TTL_DAYS: z.coerce.number().int().min(1).max(90).default(30),
+  PREMIUM_MAX_TRANSFER_BYTES: z.coerce.number().int().positive().default(21_474_836_480),
+  PREMIUM_MONTHLY_BYTES: z.coerce.number().int().positive().default(53_687_091_200),
+  PREMIUM_MAX_FILES: z.coerce.number().int().min(1).max(1000).default(250),
+  PREMIUM_PRICE_EUR_CENTS: z.coerce.number().int().positive().default(1999),
+  PREMIUM_ENABLED: bool.default(false),
+  STRIPE_SECRET_KEY: z.string().min(1).optional(),
+  STRIPE_WEBHOOK_SECRET: z.string().min(1).optional(),
+  STRIPE_PREMIUM_PRICE_ID: z.string().min(1).optional(),
 });
 
 export const env = schema.parse(process.env);

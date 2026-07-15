@@ -4,8 +4,9 @@ import { once } from "node:events";
 import { Readable } from "node:stream";
 import { and, eq, inArray, isNotNull, isNull, lt, lte, or } from "drizzle-orm";
 import { Job, Worker } from "bullmq";
+import { recordActivity } from "@/lib/activity";
 import { db } from "@/lib/db";
-import { auditLogs, oneTimeSecrets, transferFiles, transfers } from "@/lib/db/schema";
+import { auditLogs, oneTimeSecrets, transferFiles, transfers, userSessions } from "@/lib/db/schema";
 import { parseClamavResponse } from "@/lib/clamav";
 import { scanForCsam } from "@/lib/csam";
 import { env } from "@/lib/env";
@@ -21,14 +22,10 @@ type DeleteFileJob = { fileId: string };
 
 async function scanStream(stream: Readable) {
   const hash = createHash("sha256");
-  let header = Buffer.alloc(0);
-  const observe = (chunk: Buffer) => {
-    hash.update(chunk);
-    if (header.length < 16) header = Buffer.concat([header, chunk.subarray(0, 16 - header.length)]);
-  };
+  const observe = (chunk: Buffer) => hash.update(chunk);
   if (env.CLAMAV_DISABLED) {
     for await (const value of stream) observe(Buffer.isBuffer(value) ? value : Buffer.from(value));
-    return { clean: true, response: "disabled", sha256: hash.digest("hex"), header };
+    return { clean: true, response: "disabled", sha256: hash.digest("hex") };
   }
   const socket = net.createConnection({ host: env.CLAMAV_HOST, port: env.CLAMAV_PORT });
   await once(socket, "connect");
@@ -51,7 +48,6 @@ async function scanStream(stream: Readable) {
   return {
     ...parseClamavResponse(Buffer.concat(chunks).toString("utf8")),
     sha256: hash.digest("hex"),
-    header,
   };
 }
 
@@ -97,7 +93,7 @@ async function scanTransfer(transferId: string) {
       });
       return;
     }
-    const csamVerdict = await scanForCsam({ objectKey: file.objectKey, sha256: verdict.sha256, header: verdict.header });
+    const csamVerdict = scanForCsam({ sha256: verdict.sha256 });
     if (!csamVerdict.clean) {
       await quarantineTransfer({
         transferId,
@@ -111,8 +107,9 @@ async function scanTransfer(transferId: string) {
     await db.update(transferFiles).set({ status: "clean", scannedAt: new Date() }).where(eq(transferFiles.id, file.id));
   }
   const readyAt = new Date();
-  const expiresAt = new Date(readyAt.getTime() + env.TRANSFER_TTL_HOURS * 60 * 60 * 1000);
+  const expiresAt = new Date(readyAt.getTime() + transfer.retentionHours * 60 * 60 * 1000);
   await db.update(transfers).set({ status: "ready", readyAt, expiresAt }).where(and(eq(transfers.id, transferId), eq(transfers.status, "scanning")));
+  if (transfer.ownerId) void recordActivity(transfer.ownerId, "transfer.ready", undefined, { transferId, expiresAt }).catch(() => undefined);
   console.info(JSON.stringify({ event: "transfer.ready", transferId, expiresAt }));
 }
 
@@ -164,7 +161,8 @@ async function cleanup() {
   const expiredSecrets = await db.update(oneTimeSecrets).set({ ciphertext: null, nonce: null, authTag: null })
     .where(and(lt(oneTimeSecrets.expiresAt, now), isNotNull(oneTimeSecrets.ciphertext)))
     .returning({ id: oneTimeSecrets.id });
-  console.info(JSON.stringify({ event: "cleanup.complete", transfers: candidates.length, consumedFiles: consumedFiles.length, secrets: expiredSecrets.length }));
+  const expiredSessions = await db.delete(userSessions).where(lt(userSessions.expiresAt, now)).returning({ id: userSessions.id });
+  console.info(JSON.stringify({ event: "cleanup.complete", transfers: candidates.length, consumedFiles: consumedFiles.length, secrets: expiredSecrets.length, sessions: expiredSessions.length }));
 }
 
 const worker = new Worker(
@@ -205,6 +203,5 @@ process.on("SIGINT", () => void shutdown());
 console.info(JSON.stringify({
   event: "worker.started",
   clamavDisabled: env.CLAMAV_DISABLED,
-  csamProvider: env.CSAM_HIVE_API_KEY ? "hive-thorn" : "hash-denylist-only",
-  csamProviderRequired: env.CSAM_PROVIDER_REQUIRED,
+  csamProtection: env.CSAM_SHA256_DENYLIST.trim() ? "hash-denylist" : "not-configured",
 }));

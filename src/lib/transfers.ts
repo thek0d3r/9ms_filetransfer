@@ -1,4 +1,4 @@
-import { and, eq, inArray } from "drizzle-orm";
+import { and, eq, inArray, isNull } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { transferFiles, transfers } from "@/lib/db/schema";
 import { hashToken } from "@/lib/security";
@@ -27,6 +27,8 @@ export async function claimFileDownload(transferId: string, fileId: string, clai
       .where(and(eq(transferFiles.id, fileId), eq(transferFiles.transferId, transferId), eq(transferFiles.status, "clean")))
       .returning();
     if (!file) return undefined;
+    await tx.update(transfers).set({ firstDownloadedAt: claimedAt })
+      .where(and(eq(transfers.id, transferId), isNull(transfers.firstDownloadedAt)));
     const [remaining] = await tx.select({ id: transferFiles.id }).from(transferFiles)
       .where(and(eq(transferFiles.transferId, transferId), eq(transferFiles.status, "clean"))).limit(1);
     if (!remaining) {
@@ -39,7 +41,7 @@ export async function claimFileDownload(transferId: string, fileId: string, clai
 
 export async function claimTransferDownload(transferId: string, claimedAt: Date, deleteAfter: Date) {
   return db.transaction(async (tx) => {
-    const [transfer] = await tx.update(transfers).set({ status: "deleted", deletedAt: claimedAt })
+    const [transfer] = await tx.update(transfers).set({ status: "deleted", deletedAt: claimedAt, firstDownloadedAt: claimedAt })
       .where(and(eq(transfers.id, transferId), eq(transfers.status, "ready")))
       .returning({ id: transfers.id });
     if (!transfer) return [];

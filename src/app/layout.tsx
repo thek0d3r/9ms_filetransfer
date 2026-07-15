@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { currentUser } from "@/lib/auth";
 import "@fontsource-variable/archivo";
 import "@fontsource/unbounded/400.css";
 import "@fontsource/unbounded/600.css";
@@ -11,7 +12,8 @@ export const metadata: Metadata = {
   description: "Private, temporary file transfers without the waiting room.",
 };
 
-export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+  const account = await currentUser();
   return (
     <html lang="en">
       <body>
@@ -20,6 +22,9 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
           <div className="header-status"><i aria-hidden="true" /> encrypted in transit</div>
           <nav aria-label="Primary navigation">
             <Link href="/password">Passwords</Link>
+            <Link href="/pricing">Premium</Link>
+            {account ? <Link href="/account">Account</Link> : <Link href="/login">Sign in</Link>}
+            {account?.user.role === "admin" && <Link href="/admin">Admin</Link>}
             <Link href="/privacy">Privacy</Link>
             <Link href="/terms">Terms</Link>
           </nav>

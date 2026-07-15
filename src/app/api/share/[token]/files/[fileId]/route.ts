@@ -8,7 +8,7 @@ import { signedDownload } from "@/lib/s3";
 import { canAccess } from "@/lib/share-auth";
 import { claimFileDownload, filesForTransfer, isAvailable, transferByShareToken } from "@/lib/transfers";
 
-export async function GET(_request: Request, context: { params: Promise<{ token: string; fileId: string }> }) {
+export async function GET(request: Request, context: { params: Promise<{ token: string; fileId: string }> }) {
   const { token, fileId } = await context.params;
   const transfer = await transferByShareToken(token);
   if (!transfer || !isAvailable(transfer.status, transfer.expiresAt)) return apiError("Transfer not found", 404);
@@ -28,5 +28,7 @@ export async function GET(_request: Request, context: { params: Promise<{ token:
     console.error(JSON.stringify({ event: "download.delete_schedule_failed", transferId: transfer.id, fileId: claimed.id, error: errorMessage(error) }));
   }
   downloadsStarted.inc();
+  if (transfer.ownerId) void recordActivity(transfer.ownerId, "transfer.file_downloaded", request, { transferId: transfer.id, fileId: claimed.id }).catch(() => undefined);
   return NextResponse.redirect(url, 302);
 }
+import { recordActivity } from "@/lib/activity";

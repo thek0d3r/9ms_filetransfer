@@ -17,7 +17,7 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
       .where(and(eq(transferFiles.transferId, id), ne(transferFiles.status, "uploaded"))).limit(1);
     if (incomplete.length) return apiError("Every file must finish uploading first.", 409);
     await db.update(transfers).set({ status: "scanning" }).where(eq(transfers.id, id));
-    await enqueueScan(id);
+    await enqueueScan(id, transfer.scanPriority);
     return NextResponse.json({ status: "scanning" });
   } catch (error) {
     console.error(JSON.stringify({ event: "transfer.finalize.failed", transferId: id, error: errorMessage(error) }));

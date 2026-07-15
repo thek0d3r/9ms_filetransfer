@@ -1,5 +1,6 @@
 import { PassThrough, Readable } from "node:stream";
 import archiver from "archiver";
+import { recordActivity } from "@/lib/activity";
 import { downloadDeleteAfter } from "@/lib/download-lifecycle";
 import { env } from "@/lib/env";
 import { apiError, errorMessage } from "@/lib/http";
@@ -13,7 +14,7 @@ import { claimTransferDownload, expediteFileDeletion, isAvailable, transferBySha
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-export async function GET(_request: Request, context: { params: Promise<{ token: string }> }) {
+export async function GET(request: Request, context: { params: Promise<{ token: string }> }) {
   const { token } = await context.params;
   const transfer = await transferByShareToken(token);
   if (!transfer || !isAvailable(transfer.status, transfer.expiresAt)) return apiError("Transfer not found", 404);
@@ -50,6 +51,7 @@ export async function GET(_request: Request, context: { params: Promise<{ token:
     }
   })();
   downloadsStarted.inc();
+  if (transfer.ownerId) void recordActivity(transfer.ownerId, "transfer.zip_downloaded", request, { transferId: transfer.id, fileCount: files.length }).catch(() => undefined);
   const archiveName = safeFilename(transfer.title || "9ms-transfer") + ".zip";
   return new Response(Readable.toWeb(output) as ReadableStream, {
     headers: {
