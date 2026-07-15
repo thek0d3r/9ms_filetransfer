@@ -63,9 +63,9 @@ export function Recipient({ token, title, message, totalSize, fileCount, expires
             <div className="lock-glyph" aria-hidden="true"><span /></div>
             <p className="step-label">PASSWORD PROTECTED</p>
             <h2>Good link.<br />One more thing.</h2>
-            <label><span>Transfer password</span><input autoFocus type="password" minLength={8} value={password} onChange={(event) => setPassword(event.target.value)} /></label>
-            {error && <p className="form-notice">{error}</p>}
-            <button className="transfer-button" type="submit"><span>UNLOCK FILES</span><i>→</i></button>
+            <label><span>Transfer password</span><input autoFocus type="password" minLength={8} maxLength={128} autoComplete="current-password" placeholder="Enter 8+ characters" value={password} onChange={(event) => setPassword(event.target.value)} /></label>
+            {error && <p className="form-notice" role="alert">{error}</p>}
+            <button className="transfer-button" type="submit"><span>UNLOCK FILES</span><i aria-hidden="true">→</i></button>
           </form>
         ) : (
           <>
