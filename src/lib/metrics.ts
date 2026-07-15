@@ -15,3 +15,4 @@ function counter(name: string, help: string) {
 export const transfersCreated = counter("nine_ms_transfers_created_total", "Transfers created");
 export const downloadsStarted = counter("nine_ms_downloads_started_total", "Downloads started");
 export const transfersQuarantined = counter("nine_ms_transfers_quarantined_total", "Transfers quarantined");
+export const csamMatches = counter("nine_ms_csam_matches_total", "Transfers quarantined by CSAM safety scanning");

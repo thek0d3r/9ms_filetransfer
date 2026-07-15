@@ -11,6 +11,7 @@ The production deployment is designed for one Oracle Cloud VM plus a private S3 
 - S3 object storage for file bytes
 - Valkey/BullMQ jobs and rate limits
 - ClamAV fail-closed scanning worker
+- Exact-hash CSAM denylisting with optional Hive/Thorn known-and-novel media scanning
 - Nginx reverse proxy
 
 Browser uploads go directly to S3 using short-lived signed multipart URLs. The Next.js container never buffers upload bodies. Individual downloads are claimed once, redirected to a short-lived signed S3 URL, and deleted after that URL expires. ZIP downloads are streamed with bounded application memory and their source objects are queued for deletion when archiving completes.
@@ -29,6 +30,14 @@ For a lightweight UI-only development session, set `CLAMAV_DISABLED=true`. Never
 The production Compose profile hardens ClamD for the 2 GB upload ceiling. Encrypted archives/documents, broken executables, Office files containing macros, PUA signatures, and any file that exceeds an internal scan limit are quarantined instead of being treated as clean. Set `CLAMAV_DETECT_PUA=no` only if the additional false-positive risk is unacceptable. Official signatures are checked six times per day.
 
 ClamAV is signature-based and no engine detects every new sample. For a confirmed missed static sample, submit it to the ClamAV team and add a local hash signature to the persisted `${CLAMAV_DATA_DIR}` while waiting for an official signature. ClamAV automatically loads `.hdb`, `.hsb`, `.ndb`, `.ldb`, `.yar`, and `.yara` files placed in its database directory after a daemon reload.
+
+## Child-safety scanning
+
+The worker computes a SHA-256 digest while it streams each file to ClamAV. `CSAM_SHA256_DENYLIST` blocks exact matches for every file type. Supported image/video formats are identified from magic bytes rather than the browser-provided MIME type.
+
+For meaningful production coverage, obtain a CSAM Detection project key from Hive for its Thorn-powered Combined API, then set `CSAM_HIVE_API_KEY` and `CSAM_PROVIDER_REQUIRED=true`. The provider performs known-content hash matching first and a purpose-built classifier for potential novel CSAM second. Provider failures retry and ultimately quarantine the transfer; no file becomes downloadable before both malware and child-safety checks pass. Matches delete the transfer objects and create only a minimal, content-free audit record. Never place illegal media or provider match data in logs, tests, or the operator API.
+
+The exact-hash denylist is a supplemental control, not a substitute for a vetted hash provider: do not source or curate CSAM hashes yourself. Establish a trained trust-and-safety and legally reviewed reporting/preservation process before enabling production provider matches; reporting duties vary by operator jurisdiction.
 
 ## Oracle Cloud deployment
 

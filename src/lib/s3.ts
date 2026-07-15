@@ -89,6 +89,14 @@ export async function signedDownload(objectKey: string, filename: string) {
   );
 }
 
+export async function signedSafetyScan(objectKey: string) {
+  return getSignedUrl(
+    signingS3,
+    new GetObjectCommand({ Bucket: env.S3_BUCKET, Key: objectKey }),
+    { expiresIn: 5 * 60 },
+  );
+}
+
 export function getObject(objectKey: string) {
   return s3.send(new GetObjectCommand({ Bucket: env.S3_BUCKET, Key: objectKey }));
 }

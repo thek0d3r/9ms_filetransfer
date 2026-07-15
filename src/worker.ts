@@ -1,14 +1,16 @@
 import net from "node:net";
+import { createHash } from "node:crypto";
 import { once } from "node:events";
 import { Readable } from "node:stream";
 import { and, eq, inArray, isNotNull, isNull, lt, lte, or } from "drizzle-orm";
 import { Job, Worker } from "bullmq";
 import { db } from "@/lib/db";
-import { oneTimeSecrets, transferFiles, transfers } from "@/lib/db/schema";
+import { auditLogs, oneTimeSecrets, transferFiles, transfers } from "@/lib/db/schema";
 import { parseClamavResponse } from "@/lib/clamav";
+import { scanForCsam } from "@/lib/csam";
 import { env } from "@/lib/env";
 import { errorMessage } from "@/lib/http";
-import { transfersQuarantined } from "@/lib/metrics";
+import { csamMatches, transfersQuarantined } from "@/lib/metrics";
 import { enqueueCleanup } from "@/lib/queue";
 import { bullConnection, redis } from "@/lib/redis";
 import { abortMultipart, deleteObjects, getObject } from "@/lib/s3";
@@ -18,12 +20,22 @@ type TransferJob = { transferId: string };
 type DeleteFileJob = { fileId: string };
 
 async function scanStream(stream: Readable) {
-  if (env.CLAMAV_DISABLED) return { clean: true, response: "disabled" };
+  const hash = createHash("sha256");
+  let header = Buffer.alloc(0);
+  const observe = (chunk: Buffer) => {
+    hash.update(chunk);
+    if (header.length < 16) header = Buffer.concat([header, chunk.subarray(0, 16 - header.length)]);
+  };
+  if (env.CLAMAV_DISABLED) {
+    for await (const value of stream) observe(Buffer.isBuffer(value) ? value : Buffer.from(value));
+    return { clean: true, response: "disabled", sha256: hash.digest("hex"), header };
+  }
   const socket = net.createConnection({ host: env.CLAMAV_HOST, port: env.CLAMAV_PORT });
   await once(socket, "connect");
   socket.write("zINSTREAM\0");
   for await (const value of stream) {
     const chunk = Buffer.isBuffer(value) ? value : Buffer.from(value);
+    observe(chunk);
     const length = Buffer.allocUnsafe(4);
     length.writeUInt32BE(chunk.length);
     if (!socket.write(length)) await once(socket, "drain");
@@ -36,7 +48,33 @@ async function scanStream(stream: Readable) {
     once(socket, "end"),
     new Promise((_, reject) => setTimeout(() => reject(new Error("ClamAV response timed out")), 60_000)),
   ]);
-  return parseClamavResponse(Buffer.concat(chunks).toString("utf8"));
+  return {
+    ...parseClamavResponse(Buffer.concat(chunks).toString("utf8")),
+    sha256: hash.digest("hex"),
+    header,
+  };
+}
+
+async function quarantineTransfer(input: {
+  transferId: string;
+  fileId: string;
+  objectKeys: string[];
+  reason: "malware" | "csam";
+  source: string;
+}) {
+  await db.transaction(async (tx) => {
+    await tx.update(transferFiles).set({ status: "infected", scannedAt: new Date() }).where(eq(transferFiles.id, input.fileId));
+    await tx.update(transfers).set({ status: "quarantined", deletedAt: new Date() }).where(eq(transfers.id, input.transferId));
+    await tx.insert(auditLogs).values({
+      action: `transfer.${input.reason}_quarantined`,
+      transferId: input.transferId,
+      metadata: JSON.stringify({ fileId: input.fileId, source: input.source }),
+    });
+  });
+  await deleteObjects(input.objectKeys);
+  transfersQuarantined.inc();
+  if (input.reason === "csam") csamMatches.inc();
+  console.warn(JSON.stringify({ event: "transfer.quarantined", transferId: input.transferId, fileId: input.fileId, reason: input.reason, source: input.source }));
 }
 
 async function scanTransfer(transferId: string) {
@@ -50,13 +88,24 @@ async function scanTransfer(transferId: string) {
     if (!object.Body) throw new Error(`Object ${file.objectKey} has no body`);
     const verdict = await scanStream(object.Body as Readable);
     if (!verdict.clean) {
-      await db.transaction(async (tx) => {
-        await tx.update(transferFiles).set({ status: "infected", scannedAt: new Date() }).where(eq(transferFiles.id, file.id));
-        await tx.update(transfers).set({ status: "quarantined", deletedAt: new Date() }).where(eq(transfers.id, transferId));
+      await quarantineTransfer({
+        transferId,
+        fileId: file.id,
+        objectKeys: files.map((candidate) => candidate.objectKey),
+        reason: "malware",
+        source: "clamav",
       });
-      await deleteObjects(files.map((candidate) => candidate.objectKey));
-      transfersQuarantined.inc();
-      console.warn(JSON.stringify({ event: "transfer.quarantined", transferId, fileId: file.id, verdict: verdict.response }));
+      return;
+    }
+    const csamVerdict = await scanForCsam({ objectKey: file.objectKey, sha256: verdict.sha256, header: verdict.header });
+    if (!csamVerdict.clean) {
+      await quarantineTransfer({
+        transferId,
+        fileId: file.id,
+        objectKeys: files.map((candidate) => candidate.objectKey),
+        reason: "csam",
+        source: csamVerdict.source,
+      });
       return;
     }
     await db.update(transferFiles).set({ status: "clean", scannedAt: new Date() }).where(eq(transferFiles.id, file.id));
@@ -153,4 +202,9 @@ async function shutdown() {
 process.on("SIGTERM", () => void shutdown());
 process.on("SIGINT", () => void shutdown());
 
-console.info(JSON.stringify({ event: "worker.started", clamavDisabled: env.CLAMAV_DISABLED }));
+console.info(JSON.stringify({
+  event: "worker.started",
+  clamavDisabled: env.CLAMAV_DISABLED,
+  csamProvider: env.CSAM_HIVE_API_KEY ? "hive-thorn" : "hash-denylist-only",
+  csamProviderRequired: env.CSAM_PROVIDER_REQUIRED,
+}));

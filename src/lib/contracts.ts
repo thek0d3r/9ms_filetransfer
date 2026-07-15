@@ -29,7 +29,7 @@ export const multipartSchema = z.discriminatedUnion("action", [
 ]);
 
 export const reportSchema = z.object({
-  reason: z.enum(["malware", "copyright", "harassment", "illegal", "other"]),
+  reason: z.enum(["child_safety", "malware", "copyright", "harassment", "illegal", "other"]),
   details: z.string().trim().max(1000).optional(),
 });
 

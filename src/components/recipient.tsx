@@ -83,7 +83,7 @@ export function Recipient({ token, title, message, totalSize, fileCount, expires
           <form className="report-modal" onSubmit={report} onMouseDown={(event) => event.stopPropagation()}>
             <button className="modal-close" type="button" onClick={() => setReporting(false)}>×</button>
             <p className="step-label">REPORT ABUSE</p><h2>Tell us what’s wrong.</h2>
-            <label><span>Reason</span><select name="reason" defaultValue="malware"><option value="malware">Malware or phishing</option><option value="copyright">Copyright infringement</option><option value="harassment">Harassment</option><option value="illegal">Illegal content</option><option value="other">Other</option></select></label>
+            <label><span>Reason</span><select name="reason" defaultValue="child_safety"><option value="child_safety">Child safety concern</option><option value="malware">Malware or phishing</option><option value="copyright">Copyright infringement</option><option value="harassment">Harassment</option><option value="illegal">Illegal content</option><option value="other">Other</option></select></label>
             <label><span>Details <i>optional</i></span><textarea name="details" maxLength={1000} /></label>
             <button className="transfer-button" type="submit"><span>SEND REPORT</span><i>→</i></button>
           </form>
