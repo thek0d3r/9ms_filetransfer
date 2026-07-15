@@ -11,6 +11,11 @@ describe("account plans", () => {
     expect(hasPremiumAccess({ plan: "premium", subscriptionStatus: "active", subscriptionPeriodEnd: new Date("2030-01-01T00:00:00Z") }, now)).toBe(false);
   });
 
+  it("accepts a manual admin grant without a billing expiry", () => {
+    expect(hasPremiumAccess({ plan: "premium", subscriptionStatus: "admin_granted", subscriptionPeriodEnd: null }, now)).toBe(true);
+    expect(hasPremiumAccess({ plan: "free", subscriptionStatus: "admin_granted", subscriptionPeriodEnd: null }, now)).toBe(false);
+  });
+
   it("raises the per-transfer limit only for premium users", () => {
     expect(planLimits(null).plan).toBe("free");
     const premium = planLimits({ plan: "premium", subscriptionStatus: "active", subscriptionPeriodEnd: future });

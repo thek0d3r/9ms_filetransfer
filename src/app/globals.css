@@ -329,6 +329,12 @@ label i { font-style: normal; color: #666; }
 .compact-table time, .compact-table > div > span:last-child { color: #777; }
 .plan-pill { width: max-content; padding: 5px 7px; border: 1px solid #4a4a46; font: .52rem var(--mono); text-transform: uppercase; }
 .plan-pill.premium { background: var(--acid); border-color: var(--acid); color: var(--ink); }
+.admin-plan-control { display: flex; flex-wrap: wrap; align-items: center; gap: 7px; min-width: 0; }
+.admin-plan-control button { min-height: 29px; padding: 0 9px; border: 1px solid #555550; border-radius: 999px; background: transparent; color: var(--paper); font: .5rem var(--mono); letter-spacing: .04em; text-transform: uppercase; cursor: pointer; transition: border-color .18s ease, background .18s ease, color .18s ease; }
+.admin-plan-control button:hover { border-color: var(--acid); background: var(--acid); color: var(--ink); }
+.admin-plan-control button:disabled { cursor: wait; opacity: .55; }
+.admin-plan-control > small { color: #777; font: .48rem var(--mono); text-transform: uppercase; }
+.admin-plan-control .admin-plan-error { flex-basis: 100%; color: #ff7955; text-transform: none; }
 .event-feed { border-top: 1px solid #42423f; }
 .event-feed > div { display: grid; grid-template-columns: 1.1fr 1fr 1.4fr .8fr; gap: 20px; padding: 15px 0; border-bottom: 1px solid #30302e; align-items: center; font-size: .72rem; }
 .event-feed time, .event-feed span, .event-feed code { color: #777; }

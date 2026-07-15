@@ -12,6 +12,7 @@ export type PlanLimits = {
 
 export function hasPremiumAccess(user: Pick<User, "plan" | "subscriptionStatus" | "subscriptionPeriodEnd"> | null | undefined, now = new Date()) {
   if (!user || user.plan !== "premium") return false;
+  if (user.subscriptionStatus === "admin_granted") return true;
   if (!["active", "trialing"].includes(user.subscriptionStatus ?? "")) return false;
   return !user.subscriptionPeriodEnd || user.subscriptionPeriodEnd.getTime() > now.getTime();
 }
