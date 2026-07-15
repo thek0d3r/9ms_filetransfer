@@ -10,7 +10,7 @@ export default async function HomePage() {
       <section className="hero-copy" aria-labelledby="hero-title">
         <p className="eyebrow"><span>01</span> Temporary file transfer</p>
         <h1 id="hero-title">SEND IT<br /><em>NOW.</em></h1>
-        <p className="hero-lede">No account. No inbox archaeology.<br />Just files, a link, and seven days.</p>
+        <p className="hero-lede">No inbox archaeology. No waiting room.<br />Just files, a link, and {limits.plan === "premium" ? "your choice of expiry" : "seven days"}.</p>
         <div className="speed-note" aria-hidden="true">
           <span>9ms</span>
           <svg viewBox="0 0 180 28"><path d="M2 21C38 3 78 2 112 15c23 9 43 8 66-7" /></svg>

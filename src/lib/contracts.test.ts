@@ -3,7 +3,15 @@ import { createTransferSchema, multipartSchema, reportSchema } from "@/lib/contr
 
 describe("transfer contracts", () => {
   it("accepts the minimum valid transfer", () => {
-    expect(createTransferSchema.safeParse({ files: [{ name: "notes.txt", size: 1, type: "text/plain" }] }).success).toBe(true);
+    const result = createTransferSchema.safeParse({ files: [{ name: "notes.txt", size: 1, type: "text/plain" }] });
+    expect(result.success).toBe(true);
+    if (result.success) expect(result.data.retentionDays).toBe(7);
+  });
+
+  it("allows only supported link-expiry choices", () => {
+    const files = [{ name: "notes.txt", size: 1, type: "text/plain" }];
+    expect(createTransferSchema.safeParse({ retentionDays: 30, files }).success).toBe(true);
+    expect(createTransferSchema.safeParse({ retentionDays: 31, files }).success).toBe(false);
   });
 
   it("rejects empty files", () => {

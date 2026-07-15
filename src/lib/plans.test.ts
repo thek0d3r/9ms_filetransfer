@@ -13,8 +13,11 @@ describe("account plans", () => {
 
   it("raises the per-transfer limit only for premium users", () => {
     expect(planLimits(null).plan).toBe("free");
-    expect(planLimits({ plan: "premium", subscriptionStatus: "active", subscriptionPeriodEnd: future }).maxTransferBytes)
-      .toBeGreaterThan(planLimits(null).maxTransferBytes);
+    const premium = planLimits({ plan: "premium", subscriptionStatus: "active", subscriptionPeriodEnd: future });
+    expect(premium.maxTransferBytes).toBeGreaterThan(planLimits(null).maxTransferBytes);
+    expect(premium.maxFiles).toBe(250);
+    expect(premium.retentionDays).toEqual([7, 14, 30]);
+    expect(premium.scanPriority).toBeLessThan(planLimits(null).scanPriority);
   });
 
   it("uses UTC calendar months for allowance resets", () => {

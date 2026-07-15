@@ -1,6 +1,6 @@
 # 9ms
 
-9ms is a temporary file-transfer and secret-sharing service. It supports anonymous transfers, optional accounts, a paid Premium tier, multipart uploads, password-protected links, seven-day expiry, malware scanning, one-time individual and ZIP downloads, sender deletion, abuse reporting, and encrypted one-time password links.
+9ms is a temporary file-transfer and secret-sharing service. It supports anonymous transfers, optional accounts, a paid Premium tier, multipart uploads, password-protected links, selectable expiry up to 30 days, malware scanning, one-time individual and ZIP downloads, sender deletion, abuse reporting, and encrypted one-time password links.
 
 ## Architecture
 
@@ -29,7 +29,7 @@ Browser uploads go directly to S3 using short-lived signed multipart URLs. The N
 
 For a lightweight UI-only development session, set `CLAMAV_DISABLED=true`. Never disable scanning on a public deployment.
 
-The production Compose profile hardens ClamD for the 10 GB Premium upload ceiling. Encrypted archives/documents, broken executables, Office files containing macros, PUA signatures, and any file that exceeds an internal scan limit are quarantined instead of being treated as clean. Set `CLAMAV_DETECT_PUA=no` only if the additional false-positive risk is unacceptable. Official signatures are checked six times per day.
+The production Compose profile hardens ClamD for the 20 GB Premium upload ceiling. Encrypted archives/documents, broken executables, Office files containing macros, PUA signatures, and any file that exceeds an internal scan limit are quarantined instead of being treated as clean. Set `CLAMAV_DETECT_PUA=no` only if the additional false-positive risk is unacceptable. Official signatures are checked six times per day.
 
 ClamAV is signature-based and no engine detects every new sample. For a confirmed missed static sample, submit it to the ClamAV team and add a local hash signature to the persisted `${CLAMAV_DATA_DIR}` while waiting for an official signature. ClamAV automatically loads `.hdb`, `.hsb`, `.ndb`, `.ldb`, `.yar`, and `.yara` files placed in its database directory after a daemon reload.
 
@@ -63,13 +63,13 @@ Configure the S3 bucket CORS policy from `infra/s3-cors.json`, replacing the exa
 
 ## Accounts and Premium billing
 
-Free and anonymous transfers remain capped at 2 GB. An active Premium subscription allows 10 GB per transfer and 50 GB of declared uploads per UTC calendar month. The default price displayed by the application is €19.99/month. These values are configurable with `PREMIUM_MAX_TRANSFER_BYTES`, `PREMIUM_MONTHLY_BYTES`, and `PREMIUM_PRICE_EUR_CENTS`; keep the displayed price synchronized with the recurring Stripe Price.
+Free and anonymous transfers remain capped at 2 GB, 100 files, and seven days. An active Premium subscription allows 20 GB per transfer, 50 GB of declared uploads per UTC calendar month, 250 files, selectable 7/14/30-day links, scan-queue priority, and delivery activity. Files still delete after download. The default price displayed by the application is €19.99/month. Limits are configurable with `PREMIUM_MAX_TRANSFER_BYTES`, `PREMIUM_MONTHLY_BYTES`, `PREMIUM_MAX_FILES`, and `PREMIUM_PRICE_EUR_CENTS`; keep the displayed price synchronized with the recurring Stripe Price.
 
 1. Create a recurring EUR 19.99 monthly Price in Stripe.
 2. Set `STRIPE_SECRET_KEY` and `STRIPE_PREMIUM_PRICE_ID`.
 3. Add a Stripe webhook endpoint at `https://9ms.ro/api/billing/webhook` for `checkout.session.completed`, `customer.subscription.created`, `customer.subscription.updated`, and `customer.subscription.deleted`.
 4. Set the webhook signing secret as `STRIPE_WEBHOOK_SECRET`.
-5. Apply migration `0003_hesitant_cargill.sql` before starting the updated containers.
+5. Apply all pending migrations with `npm run db:migrate` before starting the updated containers.
 6. Register the owner account, then run `npm run admin:promote -- owner@example.com` (or the equivalent command inside the web container) to unlock `/admin`.
 7. Set `PREMIUM_ENABLED=true` only after the service has a lawful merchant/operator and live Stripe configuration. Until then, checkout remains disabled and the UI displays “Coming soon.”
 
