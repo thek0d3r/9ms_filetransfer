@@ -110,11 +110,15 @@ label i { font-style: normal; color: #666; }
 .share-field button { min-width: 92px; border: 0; border-left: 1px solid #444; background: var(--acid); color: var(--ink); padding: 0 18px; font: 600 .62rem var(--mono); letter-spacing: .08em; cursor: pointer; transition: background .18s, color .18s, box-shadow .18s; }
 .share-field button:hover { background: var(--signal); color: white; box-shadow: inset 4px 0 0 rgba(255,255,255,.13); }
 .share-field button:active { box-shadow: inset 4px 0 0 rgba(0,0,0,.22); }
-.complete-actions { display: flex; gap: 22px; margin-top: 22px; font-size: .75rem; }
-.complete-actions button { background: transparent; border: 1px solid #444; border-radius: 999px; color: #bbb; padding: 9px 13px; font: .57rem var(--mono); letter-spacing: .05em; text-transform: uppercase; cursor: pointer; transition: color .18s, border-color .18s, background .18s, transform .18s; }
-.complete-actions button:hover { color: var(--ink); border-color: var(--acid); background: var(--acid); transform: translateY(-1px); }
+.complete-actions { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 12px; margin-top: 22px; }
+.complete-actions a, .complete-actions button { min-height: 38px; display: inline-flex; align-items: center; justify-content: center; background: transparent; border: 1px solid #444; border-radius: 999px; color: #bbb; padding: 9px 15px; font: .57rem var(--mono); letter-spacing: .05em; text-transform: uppercase; text-decoration: none; cursor: pointer; transition: color .18s, border-color .18s, background .18s, transform .18s, box-shadow .18s; }
+.complete-actions a:hover, .complete-actions button:hover { color: var(--ink); border-color: var(--acid); background: var(--acid); transform: translateY(-1px); }
+.complete-actions .open-transfer-button { gap: 11px; padding-left: 17px; background: var(--acid); border-color: var(--acid); color: var(--ink); font-weight: 600; }
+.complete-actions .open-transfer-button::after { content: "↗"; width: 20px; height: 20px; display: grid; place-items: center; border: 1px solid rgba(16,16,15,.35); border-radius: 50%; font: .75rem/1 var(--body); transition: transform .2s, background .2s, color .2s; }
+.complete-actions .open-transfer-button:hover { background: var(--signal); border-color: var(--signal); color: white; box-shadow: 0 4px 14px rgba(255,79,25,.18); }
+.complete-actions .open-transfer-button:hover::after { transform: rotate(8deg); background: white; color: var(--ink); border-color: white; }
 .complete-actions button:last-child:hover { color: white; border-color: var(--signal); background: var(--signal); }
-.complete-actions button:active { transform: translateY(1px); }
+.complete-actions a:active, .complete-actions button:active { transform: translateY(1px); box-shadow: none; }
 
 .recipient-shell { min-height: calc(100vh - 82px); display: grid; grid-template-columns: 1.05fr .95fr; }
 .recipient-intro { padding: 9vh 6vw; display: flex; flex-direction: column; }

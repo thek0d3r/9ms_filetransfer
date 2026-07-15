@@ -292,10 +292,10 @@ export function Uploader() {
         <p className="step-label">03 / READY TO GO</p>
         <div className="complete-mark">09</div>
         <h2>Link. Copy. Gone.</h2>
-        <p>Your files will disappear automatically in seven days.</p>
+        <p>Each file disappears after download, or automatically in seven days.</p>
         <div className="share-field"><span>{session.shareUrl}</span><button type="button" onClick={copyLink}>COPY</button></div>
         <div className="complete-actions">
-          <a href={session.shareUrl}>Open transfer</a>
+          <a className="open-transfer-button" href={session.shareUrl} target="_blank" rel="noreferrer">Open transfer</a>
           <button type="button" onClick={() => location.reload()}>Send more</button>
           <button type="button" onClick={deleteTransfer}>Delete now</button>
         </div>

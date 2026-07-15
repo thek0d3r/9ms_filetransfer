@@ -86,6 +86,24 @@ services:
     # multi-architecture and runs natively on Oracle Ampere (linux/arm64/v8).
     image: clamav/clamav:1.5-debian
     restart: unless-stopped
+    environment:
+      # Keep signatures fresher than the image default (one check per day).
+      FRESHCLAM_CHECKS: ${CLAMAV_FRESHCLAM_CHECKS:-6}
+      # Match the product upload ceiling and never silently treat scan limits
+      # or content ClamAV cannot inspect as clean.
+      CLAMD_CONF_StreamMaxLength: ${CLAMAV_STREAM_MAX_LENGTH:-2048M}
+      CLAMD_CONF_MaxScanSize: ${CLAMAV_MAX_SCAN_SIZE:-2048M}
+      CLAMD_CONF_MaxFileSize: ${CLAMAV_MAX_FILE_SIZE:-2048M}
+      CLAMD_CONF_MaxScanTime: ${CLAMAV_MAX_SCAN_TIME_MS:-600000}
+      CLAMD_CONF_MaxRecursion: ${CLAMAV_MAX_RECURSION:-32}
+      CLAMD_CONF_MaxFiles: ${CLAMAV_MAX_FILES:-100000}
+      CLAMD_CONF_HeuristicAlerts: "yes"
+      CLAMD_CONF_HeuristicScanPrecedence: "yes"
+      CLAMD_CONF_AlertBrokenExecutables: "yes"
+      CLAMD_CONF_AlertEncrypted: "yes"
+      CLAMD_CONF_AlertOLE2Macros: "yes"
+      CLAMD_CONF_AlertExceedsMax: "yes"
+      CLAMD_CONF_DetectPUA: ${CLAMAV_DETECT_PUA:-yes}
     volumes:
       - ${CLAMAV_DATA_DIR:-./data/clamav}:/var/lib/clamav
     healthcheck:

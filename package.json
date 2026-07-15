@@ -13,6 +13,7 @@
     "worker:start": "node dist-worker/worker.js",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
+    "test:scan": "node scripts/scan-smoke.mjs",
     "test:watch": "vitest",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",

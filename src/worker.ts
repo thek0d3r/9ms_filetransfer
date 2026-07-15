@@ -5,6 +5,7 @@ import { and, eq, inArray, isNotNull, isNull, lt, lte, or } from "drizzle-orm";
 import { Job, Worker } from "bullmq";
 import { db } from "@/lib/db";
 import { oneTimeSecrets, transferFiles, transfers } from "@/lib/db/schema";
+import { parseClamavResponse } from "@/lib/clamav";
 import { env } from "@/lib/env";
 import { errorMessage } from "@/lib/http";
 import { transfersQuarantined } from "@/lib/metrics";
@@ -35,10 +36,7 @@ async function scanStream(stream: Readable) {
     once(socket, "end"),
     new Promise((_, reject) => setTimeout(() => reject(new Error("ClamAV response timed out")), 60_000)),
   ]);
-  const response = Buffer.concat(chunks).toString("utf8").replaceAll("\0", "").trim();
-  if (response.endsWith("OK")) return { clean: true, response };
-  if (response.includes("FOUND")) return { clean: false, response };
-  throw new Error(`Unexpected ClamAV response: ${response}`);
+  return parseClamavResponse(Buffer.concat(chunks).toString("utf8"));
 }
 
 async function scanTransfer(transferId: string) {

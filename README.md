@@ -26,6 +26,10 @@ Browser uploads go directly to S3 using short-lived signed multipart URLs. The N
 
 For a lightweight UI-only development session, set `CLAMAV_DISABLED=true`. Never disable scanning on a public deployment.
 
+The production Compose profile hardens ClamD for the 2 GB upload ceiling. Encrypted archives/documents, broken executables, Office files containing macros, PUA signatures, and any file that exceeds an internal scan limit are quarantined instead of being treated as clean. Set `CLAMAV_DETECT_PUA=no` only if the additional false-positive risk is unacceptable. Official signatures are checked six times per day.
+
+ClamAV is signature-based and no engine detects every new sample. For a confirmed missed static sample, submit it to the ClamAV team and add a local hash signature to the persisted `${CLAMAV_DATA_DIR}` while waiting for an official signature. ClamAV automatically loads `.hdb`, `.hsb`, `.ndb`, `.ldb`, `.yar`, and `.yara` files placed in its database directory after a daemon reload.
+
 ## Oracle Cloud deployment
 
 Use an Ubuntu or Oracle Linux VM with Docker Engine and Compose. ClamAV needs substantial memory; 4 GB RAM is the practical minimum, and an Ampere A1 shape with 8 GB or more is recommended.
