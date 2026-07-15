@@ -124,17 +124,26 @@ label i { font-style: normal; color: #666; }
 .recipient-intro blockquote { font-size: 1.2rem; line-height: 1.4; margin: auto 0 0; padding: 28px 0 0; border-top: 1px solid var(--line); max-width: 620px; }
 .download-panel { background: var(--ink); color: var(--paper); padding: clamp(28px, 5vw, 70px); display: flex; flex-direction: column; }
 .download-heading { display: flex; justify-content: space-between; gap: 30px; align-items: flex-end; padding-bottom: 40px; }
-.download-all { width: 110px; height: 110px; flex: 0 0 auto; border: 1px solid #ff7449; border-radius: 50%; background: var(--signal); display: grid; place-items: center; text-decoration: none; font: .56rem var(--mono); text-align: center; box-shadow: 0 0 0 7px rgba(255,79,25,.1), inset 0 0 0 1px rgba(255,255,255,.13); transition: transform .25s, background .2s, color .2s, box-shadow .2s; }
-.download-all i { font: normal 1.5rem var(--body); margin-top: -28px; }
-.download-all:hover { transform: rotate(-7deg) scale(1.05); background: var(--acid); color: var(--ink); box-shadow: 0 0 0 9px rgba(216,255,62,.1); }
-.download-all:active { transform: rotate(-7deg) scale(.98); }
+.download-all { width: 116px; height: 116px; flex: 0 0 auto; border: 1px solid #ff8863; border-radius: 50%; background: var(--signal); color: white; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; position: relative; overflow: hidden; isolation: isolate; text-decoration: none; font: 600 .55rem/1.2 var(--mono); letter-spacing: .08em; text-align: center; box-shadow: 0 0 0 7px rgba(255,79,25,.1), inset 0 0 0 1px rgba(255,255,255,.16); transition: transform .25s cubic-bezier(.2,.8,.2,1), background .2s, color .2s, border-color .2s, box-shadow .2s; }
+.download-all::before { content: ""; position: absolute; inset: 7px; border: 1px solid rgba(255,255,255,.2); border-radius: inherit; z-index: -1; transition: border-color .2s, transform .25s; }
+.download-all span { max-width: 64px; }
+.download-all i { width: 18px; height: 20px; position: relative; display: block; font-size: 0; }
+.download-all i::before { content: ""; position: absolute; left: 50%; top: 1px; width: 1.5px; height: 15px; border-radius: 2px; background: currentColor; transform: translateX(-50%); }
+.download-all i::after { content: ""; position: absolute; left: 50%; bottom: 1px; width: 7px; height: 7px; border-right: 1.5px solid currentColor; border-bottom: 1.5px solid currentColor; transform: translateX(-50%) rotate(45deg); }
+.download-all:hover { transform: translateY(-3px) rotate(-4deg); background: var(--acid); color: var(--ink); border-color: var(--acid); box-shadow: 0 0 0 9px rgba(216,255,62,.1), 5px 7px 0 rgba(0,0,0,.2); }
+.download-all:hover::before { border-color: rgba(16,16,15,.24); transform: rotate(8deg); }
+.download-all:hover i { animation: download-nudge .65s cubic-bezier(.2,.8,.2,1); }
+.download-all:active { transform: translateY(0) rotate(-4deg) scale(.97); box-shadow: 0 0 0 5px rgba(216,255,62,.08); }
+@keyframes download-nudge { 0%, 100% { transform: translateY(0); } 45% { transform: translateY(5px); } 65% { transform: translateY(-2px); } }
 .download-list { border-top: 1px solid #393937; overflow: auto; }
 .download-list li { display: grid; grid-template-columns: 42px 1fr auto; gap: 16px; align-items: center; padding: 20px 0; border-bottom: 1px solid #393937; }
 .download-list b { color: #666; font: .55rem var(--mono); }
 .download-list span { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .download-list small { display: block; color: #777; font: .57rem var(--mono); margin-top: 5px; }
-.download-list a { width: 40px; height: 40px; display: grid; place-items: center; border: 1px solid #4b4b48; border-radius: 50%; text-decoration: none; transition: background .18s, color .18s, border-color .18s, transform .18s; }
-.download-list a:hover { background: var(--acid); color: var(--ink); border-color: var(--acid); transform: translateY(-2px); }
+.download-list a { width: 42px; height: 42px; display: grid; place-items: center; position: relative; border: 1px solid #4b4b48; border-radius: 50%; font-size: 0; text-decoration: none; transition: background .18s, color .18s, border-color .18s, transform .18s, box-shadow .18s; }
+.download-list a::before { content: ""; position: absolute; left: 50%; top: 11px; width: 1.5px; height: 14px; border-radius: 2px; background: currentColor; transform: translateX(-50%); }
+.download-list a::after { content: ""; position: absolute; left: 50%; top: 18px; width: 7px; height: 7px; border-right: 1.5px solid currentColor; border-bottom: 1.5px solid currentColor; transform: translateX(-50%) rotate(45deg); }
+.download-list a:hover { background: var(--acid); color: var(--ink); border-color: var(--acid); transform: translateY(-2px); box-shadow: 0 4px 14px rgba(216,255,62,.14); }
 .download-list a:active { transform: translateY(0) scale(.94); }
 .panel-foot { margin-top: auto; padding-top: 32px; display: flex; justify-content: space-between; gap: 20px; color: #777; font-size: .68rem; }
 .panel-foot button { background: none; border: 0; border-bottom: 1px solid #555; color: #aaa; padding: 2px 0; font: .58rem var(--mono); letter-spacing: .05em; text-transform: uppercase; cursor: pointer; transition: color .18s, border-color .18s; }
