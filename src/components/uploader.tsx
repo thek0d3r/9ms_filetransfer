@@ -14,6 +14,15 @@ type Session = {
 };
 
 const MAX_BYTES = 2 * 1024 * 1024 * 1024;
+const MIN_PASSWORD_LENGTH = 8;
+
+type ApiErrorBody = {
+  error?: string;
+  details?: {
+    formErrors?: string[];
+    fieldErrors?: Record<string, string[] | undefined>;
+  };
+};
 
 function bytes(value: number) {
   if (value === 0) return "0 B";
@@ -28,8 +37,13 @@ function fingerprint(file: File) {
 
 async function jsonRequest<T>(url: string, init: RequestInit = {}) {
   const response = await fetch(url, { ...init, headers: { "Content-Type": "application/json", ...init.headers } });
-  const body = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error((body as { error?: string }).error || "Request failed");
+  const body = await response.json().catch(() => ({})) as ApiErrorBody;
+  if (!response.ok) {
+    const fieldError = body.details?.fieldErrors
+      ? Object.values(body.details.fieldErrors).flat().find(Boolean)
+      : undefined;
+    throw new Error(body.details?.formErrors?.[0] || fieldError || body.error || "Request failed");
+  }
   return body as T;
 }
 
@@ -189,6 +203,10 @@ export function Uploader() {
   async function start() {
     if (!files.length || totalSize > MAX_BYTES || files.some((file) => file.size === 0)) {
       setNotice(files.some((file) => file.size === 0) ? "Empty files cannot be transferred." : "Choose files within the 2 GB limit.");
+      return;
+    }
+    if (password.length > 0 && password.length < MIN_PASSWORD_LENGTH) {
+      setNotice(`Password must be at least ${MIN_PASSWORD_LENGTH} characters.`);
       return;
     }
     try {

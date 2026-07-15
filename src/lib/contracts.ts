@@ -9,7 +9,10 @@ export const fileDeclarationSchema = z.object({
 export const createTransferSchema = z.object({
   title: z.string().trim().max(120).optional(),
   message: z.string().trim().max(2000).optional(),
-  password: z.string().min(8).max(128).optional(),
+  password: z.string()
+    .min(8, "Password must be at least 8 characters.")
+    .max(128, "Password must be at most 128 characters.")
+    .optional(),
   files: z.array(fileDeclarationSchema).min(1),
 });
 
